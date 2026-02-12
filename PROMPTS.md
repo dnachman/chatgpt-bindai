@@ -39,3 +39,12 @@ Create a widget to display the quotes For comparison.
 Next to each quote add a button to "Select" the quote.  When the user clicks the button, it should link to an external website - use https://www.adp.com for now. 
 
 
+----
+
+David's Donuts
+David Nachman
+71 Hanover Rd, Florham Park, NJ 07932
+Bakery
+6 Employees
+Annual payroll is $125000
+david@nachman.org

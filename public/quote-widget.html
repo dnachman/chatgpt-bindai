@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Insurance Quotes</title>
+  <style>
+    :root {
+      color: #0b0b0f;
+      font-family:
+        "Inter",
+        system-ui,
+        -apple-system,
+        sans-serif;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #f6f8fb;
+    }
+
+    main {
+      width: 100%;
+      max-width: 600px;
+      min-height: 260px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 1.25rem;
+      text-align: center;
+    }
+
+    .quote-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .quote-card {
+      background: #f2f4fb;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .quote-details {
+      flex: 1;
+    }
+
+    .company-name {
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+      color: #1e293b;
+    }
+
+    .quote-info {
+        font-size: 0.95rem;
+        color: #475569;
+    }
+
+    .premium {
+        color: #0f172a;
+        font-weight: 600;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      background: #111bf5;
+      color: white;
+      font-weight: 600;
+      padding: 10px 20px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+        background: #0f17d0;
+    }
+
+    .empty-state {
+        text-align: center;
+        color: #64748b;
+        padding: 40px 0;
+    }
+
+  </style>
+</head>
+
+<body>
+  <main>
+    <h2>Workers' Compensation Quotes</h2>
+    <div id="quote-list" class="quote-list">
+        <div class="empty-state">
+            Waiting for quote details...
+        </div>
+    </div>
+  </main>
+
+  <script type="module">
+    const listEl = document.querySelector("#quote-list");
+
+    const renderQuotes = (quotes) => {
+      listEl.innerHTML = "";
+      
+      if (!quotes || quotes.length === 0) {
+        listEl.innerHTML = '<div class="empty-state">No quotes available.</div>';
+        return;
+      }
+
+      quotes.forEach((quote) => {
+        const card = document.createElement("div");
+        card.className = "quote-card";
+
+        const details = document.createElement("div");
+        details.className = "quote-details";
+
+        const company = document.createElement("div");
+        company.className = "company-name";
+        company.textContent = quote.company;
+
+        const premium = document.createElement("div");
+        premium.className = "quote-info";
+        premium.innerHTML = `Premium: <span class="premium">$${quote.premium}</span> / year`;
+
+        const deductible = document.createElement("div");
+        deductible.className = "quote-info";
+        deductible.textContent = `Deductible: $${quote.deductible}`;
+
+        details.appendChild(company);
+        details.appendChild(premium);
+        details.appendChild(deductible);
+
+        const button = document.createElement("button");
+        button.textContent = "Select";
+        button.onclick = () => {
+             window.open("https://www.adp.com", "_blank");
+        };
+
+        card.appendChild(details);
+        card.appendChild(button);
+        listEl.appendChild(card);
+      });
+    };
+
+    const updateFromResponse = (response) => {
+      if (response?.structuredContent?.quotes) {
+        renderQuotes(response.structuredContent.quotes);
+      }
+    };
+
+    // MCP Apps standard bridge: JSON-RPC messages over postMessage.
+    let rpcId = 0;
+    const pendingRequests = new Map();
+
+    const rpcNotify = (method, params) => {
+      window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
+    };
+
+    const rpcRequest = (method, params) =>
+      new Promise((resolve, reject) => {
+        const id = ++rpcId;
+        pendingRequests.set(id, { resolve, reject });
+        window.parent.postMessage(
+          { jsonrpc: "2.0", id, method, params },
+          "*"
+        );
+      });
+
+    window.addEventListener(
+      "message",
+      (event) => {
+        if (event.source !== window.parent) return;
+        const message = event.data;
+        if (!message || message.jsonrpc !== "2.0") return;
+
+        // Responses
+        if (typeof message.id === "number") {
+          const pending = pendingRequests.get(message.id);
+          if (!pending) return;
+          pendingRequests.delete(message.id);
+
+          if (message.error) {
+            pending.reject(message.error);
+            return;
+          }
+
+          pending.resolve(message.result);
+          return;
+        }
+
+        // Notifications
+        if (typeof message.method !== "string") return;
+        if (message.method === "ui/notifications/tool-result") {
+          updateFromResponse(message.params);
+        }
+      },
+      { passive: true }
+    );
+
+    const initializeBridge = async () => {
+      const appInfo = { name: "quote-widget", version: "0.1.0" };
+      const appCapabilities = {};
+      const protocolVersion = "2026-01-26";
+
+      try {
+        await rpcRequest("ui/initialize", {
+          appInfo,
+          appCapabilities,
+          protocolVersion,
+        });
+        rpcNotify("ui/notifications/initialized", {});
+      } catch (error) {
+        console.error("Failed to initialize the MCP Apps bridge:", error);
+        throw error;
+      }
+    };
+
+    initializeBridge();
+  </script>
+</body>
+
+</html>

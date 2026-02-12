@@ -9,38 +9,34 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 
-const todoHtml = readFileSync("public/todo-widget.html", "utf8");
+const quoteHtml = readFileSync("public/quote-widget.html", "utf8");
 
-const addTodoInputSchema = {
-  title: z.string().min(1),
+const getQuoteInputSchema = {
+  business_name: z.string().describe("Name of the business"),
+  business_owner: z.string().describe("Name of the business owner"),
+  business_address: z.string().describe("Address of the business"),
+  business_industry: z.string().describe("Industry of the business"),
+  number_of_employees: z.number().describe("Number of employees"),
+  total_payroll: z.number().describe("Total annual payroll"),
+  state: z.string().describe("State code (e.g. CA, NY)"),
+  zip_code: z.string().describe("Zip code"),
+  email_address: z.string().email().describe("Email address"),
 };
 
-const completeTodoInputSchema = {
-  id: z.string().min(1),
-};
-
-let todos = [];
-let nextId = 1;
-
-const replyWithTodos = (message) => ({
-  content: message ? [{ type: "text", text: message }] : [],
-  structuredContent: { tasks: todos },
-});
-
-function createTodoServer() {
-  const server = new McpServer({ name: "todo-app", version: "0.1.0" });
+function createQuoteServer() {
+  const server = new McpServer({ name: "quote-app", version: "0.1.0" });
 
   registerAppResource(
     server,
-    "todo-widget",
-    "ui://widget/todo.html",
+    "quote-widget",
+    "ui://widget/quote.html",
     {},
     async () => ({
       contents: [
         {
-          uri: "ui://widget/todo.html",
+          uri: "ui://widget/quote.html",
           mimeType: RESOURCE_MIME_TYPE,
-          text: todoHtml,
+          text: quoteHtml,
         },
       ],
     })
@@ -48,48 +44,41 @@ function createTodoServer() {
 
   registerAppTool(
     server,
-    "add_todo",
+    "get_quote",
     {
-      title: "Add todo",
-      description: "Creates a todo item with the given title.",
-      inputSchema: addTodoInputSchema,
+      title: "Get Insurance Quote",
+      description: "Get workers compensation insurance quotes based on business details",
+      inputSchema: getQuoteInputSchema,
       _meta: {
-        ui: { resourceUri: "ui://widget/todo.html" },
+        ui: { resourceUri: "ui://widget/quote.html" },
       },
     },
     async (args) => {
-      const title = args?.title?.trim?.() ?? "";
-      if (!title) return replyWithTodos("Missing title.");
-      const todo = { id: `todo-${nextId++}`, title, completed: false };
-      todos = [...todos, todo];
-      return replyWithTodos(`Added "${todo.title}".`);
-    }
-  );
+        // Generate simplified fake quotes based on inputs
+        const basePremium = (args.total_payroll * 0.02) + (args.number_of_employees * 50);
+        
+        const quotes = [
+            {
+                company: "SafeGuard Insurance",
+                premium: Math.round(basePremium * 0.9),
+                deductible: 1000
+            },
+            {
+                company: "BizProtect Corp",
+                premium: Math.round(basePremium * 1.1),
+                deductible: 500
+            },
+            {
+                company: "WorkerShield",
+                premium: Math.round(basePremium * 1.05),
+                deductible: 750
+            }
+        ];
 
-  registerAppTool(
-    server,
-    "complete_todo",
-    {
-      title: "Complete todo",
-      description: "Marks a todo as done by id.",
-      inputSchema: completeTodoInputSchema,
-      _meta: {
-        ui: { resourceUri: "ui://widget/todo.html" },
-      },
-    },
-    async (args) => {
-      const id = args?.id;
-      if (!id) return replyWithTodos("Missing todo id.");
-      const todo = todos.find((task) => task.id === id);
-      if (!todo) {
-        return replyWithTodos(`Todo ${id} was not found.`);
-      }
-
-      todos = todos.map((task) =>
-        task.id === id ? { ...task, completed: true } : task
-      );
-
-      return replyWithTodos(`Completed "${todo.title}".`);
+      return {
+        content: [{ type: "text", text: `Generated 3 quotes for ${args.business_name}` }],
+        structuredContent: { quotes: quotes },
+      };
     }
   );
 
@@ -120,7 +109,7 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/") {
-    res.writeHead(200, { "content-type": "text/plain" }).end("Todo MCP server");
+    res.writeHead(200, { "content-type": "text/plain" }).end("Insurance Quote MCP server");
     return;
   }
 
@@ -129,7 +118,7 @@ const httpServer = createServer(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
 
-    const server = createTodoServer();
+    const server = createQuoteServer();
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined, // stateless mode
       enableJsonResponse: true,
@@ -157,6 +146,6 @@ const httpServer = createServer(async (req, res) => {
 
 httpServer.listen(port, host, () => {
   console.log(
-    `Todo MCP server listening on http://${host}:${port}${MCP_PATH}`
+    `Quote MCP server listening on http://${host}:${port}${MCP_PATH}`
   );
 });
