@@ -154,8 +154,8 @@ const httpServer = createServer(async (req, res) => {
   res.writeHead(404).end("Not Found");
 });
 
-httpServer.listen(port, () => {
+httpServer.listen(port, "0.0.0.0", () => {
   console.log(
-    `Todo MCP server listening on http://localhost:${port}${MCP_PATH}`
+    `Todo MCP server listening on http://0.0.0.0:${port}${MCP_PATH}`
   );
 });
