@@ -97,6 +97,7 @@ function createTodoServer() {
 }
 
 const port = Number(process.env.PORT ?? 8787);
+const host = process.env.MCP_HOST || 'localhost';
 const MCP_PATH = "/mcp";
 
 const httpServer = createServer(async (req, res) => {
@@ -154,8 +155,8 @@ const httpServer = createServer(async (req, res) => {
   res.writeHead(404).end("Not Found");
 });
 
-httpServer.listen(port, "0.0.0.0", () => {
+httpServer.listen(port, host, () => {
   console.log(
-    `Todo MCP server listening on http://0.0.0.0:${port}${MCP_PATH}`
+    `Todo MCP server listening on http://${host}:${port}${MCP_PATH}`
   );
 });
