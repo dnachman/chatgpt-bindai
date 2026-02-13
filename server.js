@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { readFileSync } from "node:fs";
+import { readFileSync, watch } from "node:fs";
 import {
   registerAppResource,
   registerAppTool,
@@ -8,8 +8,6 @@ import {
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
-
-const quoteHtml = readFileSync("public/quote-widget.html", "utf8");
 
 const getQuoteInputSchema = {
   business_name: z.string().describe("Name of the business"),
@@ -22,6 +20,19 @@ const getQuoteInputSchema = {
   zip_code: z.string().describe("Zip code"),
   email_address: z.string().email().describe("Email address"),
 };
+
+// Track active servers to send notifications
+const activeServers = new Set();
+
+// Watch for file changes
+watch("public/quote-widget.html", (eventType, filename) => {
+  if (filename) {
+    console.log(`File ${filename} changed`);
+    for (const server of activeServers) {
+      server.server.sendResourceUpdated({ uri: "ui://widget/quote.html" });
+    }
+  }
+});
 
 function createQuoteServer() {
   const server = new McpServer({ name: "quote-app", version: "0.1.0" });
@@ -36,7 +47,7 @@ function createQuoteServer() {
         {
           uri: "ui://widget/quote.html",
           mimeType: RESOURCE_MIME_TYPE,
-          text: quoteHtml,
+          text: readFileSync("public/quote-widget.html", "utf8"),
         },
       ],
     })
@@ -54,6 +65,15 @@ function createQuoteServer() {
       },
     },
     async (args) => {
+        // Log the received arguments
+        console.log("------------------------------------------");
+        console.log("Received Quote Request:");
+        console.log("Business Name:", args.business_name);
+        console.log("Owner:", args.business_owner);
+        console.log("Payroll:", args.total_payroll);
+        console.log("Employees:", args.number_of_employees);
+        console.log("------------------------------------------");
+
         // Generate simplified fake quotes based on inputs
         const basePremium = (args.total_payroll * 0.02) + (args.number_of_employees * 50);
         
@@ -76,7 +96,7 @@ function createQuoteServer() {
         ];
 
       return {
-        content: [{ type: "text", text: `Generated 3 quotes for ${args.business_name}` }],
+        // content: [{ type: "text", text: `Generated 3 quotes for ${args.business_name}` }],
         structuredContent: { quotes: quotes },
       };
     }
@@ -119,14 +139,17 @@ const httpServer = createServer(async (req, res) => {
     res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
 
     const server = createQuoteServer();
+    activeServers.add(server); // Track active server
+
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined, // stateless mode
       enableJsonResponse: true,
     });
 
     res.on("close", () => {
-      transport.close();
-      server.close();
+        activeServers.delete(server); // Cleanup
+        transport.close();
+        server.close();
     });
 
     try {

@@ -48,3 +48,16 @@ Bakery
 6 Employees
 Annual payroll is $125000
 david@nachman.org
+
+
+{
+  "business_name": "David's Donuts",
+  "business_owner": "David Nachman",
+  "business_address": "71 Hanover Rd, Florham Park NJ 07932",
+  "business_industry": "Bakery",
+  "number_of_employees": 6,
+  "total_payroll": 150000,
+  "state": "NJ",
+  "zip_code": "07932",
+  "email_address": "david@nachman.org"
+}

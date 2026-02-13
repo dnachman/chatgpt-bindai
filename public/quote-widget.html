@@ -73,19 +73,19 @@
     }
 
     .quote-info {
-        font-size: 0.95rem;
-        color: #475569;
+      font-size: 0.95rem;
+      color: #475569;
     }
 
     .premium {
-        color: #0f172a;
-        font-weight: 600;
+      color: #0f172a;
+      font-weight: 600;
     }
 
     button {
       border: none;
       border-radius: 8px;
-      background: #111bf5;
+      background: #D0271D;
       color: white;
       font-weight: 600;
       padding: 10px 20px;
@@ -96,25 +96,24 @@
     }
 
     button:hover {
-        background: #0f17d0;
+      background: #b02118;
     }
 
     .empty-state {
-        text-align: center;
-        color: #64748b;
-        padding: 40px 0;
+      text-align: center;
+      color: #64748b;
+      padding: 40px 0;
     }
-
   </style>
 </head>
 
 <body>
   <main>
-    <h2>Workers' Compensation Quotes</h2>
+    <h2>Workers' Compensation Quotes by BindAI</h2>
     <div id="quote-list" class="quote-list">
-        <div class="empty-state">
-            Waiting for quote details...
-        </div>
+      <div class="empty-state">
+        Waiting for quote details...
+      </div>
     </div>
   </main>
 
@@ -123,7 +122,7 @@
 
     const renderQuotes = (quotes) => {
       listEl.innerHTML = "";
-      
+
       if (!quotes || quotes.length === 0) {
         listEl.innerHTML = '<div class="empty-state">No quotes available.</div>';
         return;
@@ -153,9 +152,9 @@
         details.appendChild(deductible);
 
         const button = document.createElement("button");
-        button.textContent = "Select";
+        button.textContent = "Continue on bindai.com";
         button.onclick = () => {
-             window.open("https://www.adp.com", "_blank");
+          window.open("https://www.adp.com", "_blank");
         };
 
         card.appendChild(details);
@@ -213,6 +212,7 @@
         // Notifications
         if (typeof message.method !== "string") return;
         if (message.method === "ui/notifications/tool-result") {
+          console.log("Received tool result:", message.params);
           updateFromResponse(message.params);
         }
       },
